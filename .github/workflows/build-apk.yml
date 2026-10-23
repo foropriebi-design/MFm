@@ -1,0 +1,47 @@
+
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Android project ZIP
+        run: |
+          ZIP=$(find . -maxdepth 1 -name '*.zip' -print -quit)
+          if [ -z "$ZIP" ]; then
+            echo "No project ZIP found in repository root."
+            exit 1
+          fi
+          mkdir android-project
+          unzip -q "$ZIP" -d android-project
+          echo "Project files:"
+          find android-project -maxdepth 3 -type f | head -100
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: |
+          PROJECT_DIR=$(find android-project -name settings.gradle -o -name settings.gradle.kts | head -1 | xargs dirname)
+          cd "$PROJECT_DIR"
+          gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: My-Finance-Manager-APK
+          path: android-project/**/build/outputs/apk/debug/*.apk
+          
